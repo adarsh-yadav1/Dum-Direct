@@ -31,4 +31,36 @@ Work in progress. The repository is being built in the open, one reviewable comm
 
 ## Running locally
 
-Instructions will be added here once the backend and frontend run end to end.
+Current state: the API exposes a health route and the web app shows whether it can reach the API. Ordering features are added in later commits.
+
+### Without Docker
+
+Backend (Python 3.13):
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest            # run the tests
+uvicorn app.main:app --reload --port 8000
+```
+
+Frontend (Node 22) in a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev                 # http://localhost:5173
+```
+
+The web app should show "API is online". Interactive API documentation is at http://localhost:8000/docs.
+
+### With Docker Compose
+
+```bash
+cp .env.example .env
+docker compose up --build   # web on http://localhost:5173, API on http://localhost:8000
+```
+
+Status of this path: `docker compose config` passes, but the images have not yet been built and run end to end. This line is updated once they have.

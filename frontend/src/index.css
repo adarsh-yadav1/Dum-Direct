@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/*
+  Design tokens.
+  A restrained palette: warm paper, near-black ink and one accent.
+  Green and red are reserved for meaning (veg and non-veg marks, late orders),
+  so colour never appears without a purpose.
+*/
+@theme {
+  --color-paper: #fbf8f3;
+  --color-surface: #ffffff;
+  --color-line: #e9e2d8;
+  --color-ink: #1f1a17;
+  --color-muted: #6b6259;
+  --color-accent: #9a3412;
+  --color-accent-strong: #7c2a0e;
+
+  --color-veg: #2e7d32;
+  --color-nonveg: #b3261e;
+  --color-warn: #b7791f;
+  --color-late: #b3261e;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  /* Visible focus for keyboard and switch users. */
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Prices line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

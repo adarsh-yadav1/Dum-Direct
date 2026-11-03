@@ -128,23 +128,23 @@ All money is stored as integer paise. All timestamps are stored in UTC and displ
 
 | Table | Key columns | Notes |
 |---|---|---|
-| users | id, email, password_hash, name, phone, role (customer, kitchen, manager, admin), outlet_id (nullable), marketing_opt_in, created_at | Staff are bound to an outlet |
-| outlets | id, name, kind (outlet or cloud_kitchen), city, locality, lat, lng, delivery_radius_km, fssai_no, min_prep_minutes, capacity_units_per_hour, is_open | FSSAI shown on the site |
-| categories | id, name, sort_order, available_from, available_to | Time window gives time-based menus |
-| menu_items | id, category_id, name, description, image_url, is_veg, spice_level (0 to 3), allergens (text array), base_price_paise, base_prep_minutes, is_active | Price is GST-inclusive |
-| item_variants | id, item_id, label (for example "Half", "Family pack"), price_paise, serves | Portions |
-| addon_groups / addons | id, item_id, name, price_paise, max_select | Add-ons |
-| city_prices | item_id, variant_id, city, price_paise | Overrides base price by city |
-| outlet_items | outlet_id, item_id, is_available, updated_by, updated_at | Out-of-stock pause |
-| orders | id, public_code (for example WEB-778120), user_id, outlet_id (assigned by routing, never supplied by the client), status, delivery_lat, delivery_lng, address_json, distance_km, routing_json (candidates, distances, reason), subtotal_paise, discount_paise, total_paise, gst_included_paise, placed_at, promised_at, ai_estimate_min, override_min, override_by, idempotency_key (unique), late_alerted_at | |
-| order_items | order_id, item_id, variant_id, name_snapshot, unit_price_paise, qty, addons_json, notes | Snapshots so later price changes do not alter history |
-| payments | id, order_id, method (upi or card), status, provider_ref, amount_paise | Mock gateway |
-| order_events | id (bigserial), order_id, outlet_id, type, payload_json, actor_id, created_at | Audit log and the SSE event stream |
-| notifications | id, user_id, channel, template, body, created_at | Mock WhatsApp and SMS |
-| coupons (P1) | code, kind, value, min_order_paise, valid_from, valid_to, max_uses | |
-| loyalty_ledger (P2) | user_id, order_id, points, kind | Not built unless time allows |
+| users | id, email (stored lowercase), password_hash (Argon2id), name, phone, role (customer, kitchen, manager, admin), outlet_id, marketing_opt_in, marketing_opt_in_at, created_at | Kitchen and manager users must have an outlet; customers and admins must not (check constraint). Opt-in is recorded with the time it was given |
+| outlets | id, name, kind (outlet or cloud_kitchen), city, locality, address_line, latitude, longitude, delivery_radius_km, fssai_no (14 characters), min_prep_minutes, capacity_units_per_hour, delivery_fee_paise, is_open | FSSAI number is shown on the site. Coordinates, radii and licence numbers are fictional (A1, A2, A7) |
+| localities | id, name, city, latitude, longitude | Reference list behind the location search (A3). Unique per name and city |
+| categories | id, name, sort_order, available_from, available_to | The optional time window gives time-based menus. A window needs both ends (check constraint) |
+| menu_items | id, category_id, slug, name, description, image_url, is_veg, spice_level (0 to 3), allergens, base_prep_minutes, sort_order, is_active | Items carry no price of their own: prices live on their portions |
+| item_variants | id, item_id, label, price_paise, serves, sort_order | Portions. Every item has at least one. Prices include 5% GST. Unique per item and label |
+| addons | id, item_id, name, price_paise, is_active | Optional paid extras for one item. A flat list: grouped or required choices are not modelled in this build |
+| city_prices | variant_id, city, price_paise | Overrides a portion's price for outlets in that city; otherwise the portion's own price applies |
+| outlet_items | outlet_id, item_id, is_available, updated_by_user_id, updated_at | No row means the outlet does not offer the item. A row with is_available false means it is paused (out of stock) |
+| orders | id, public_code (for example WEB-778120), user_id, outlet_id (assigned by routing, never supplied by the client), status, delivery_latitude, delivery_longitude, address_json, distance_km, routing_json (candidates, distances, reason), subtotal_paise, discount_paise, delivery_fee_paise, total_paise, gst_included_paise, placed_at, promised_at, preparing_at, ready_at, completed_at, ai_estimate_min, override_min, override_by_user_id, late_alerted_at, idempotency_key, updated_at | Delivery only (A15) |
+| order_items | id, order_id, item_id, variant_id, name_snapshot, variant_label_snapshot, unit_price_paise, qty, addons_json, notes | Name and price are copied at order time, so later menu changes do not alter history |
+| payments | id, order_id, method (upi or card), status, provider_ref, amount_paise, created_at, updated_at | Mock gateway (A8) |
+| order_events | id, order_id, outlet_id, type, payload_json, actor_user_id, created_at | Order-scoped audit log, and the source of the real-time streams. Menu availability changes are not recorded here |
+| notifications | id, user_id, order_id, channel (whatsapp or sms), template, body, created_at | Messages are recorded and never sent (A9) |
+| coupons (P1), loyalty_ledger (P2) | | Not built yet |
 
-Key constraints: unique `idempotency_key` on orders, a check that `total = subtotal - discount`, foreign keys everywhere, indexes on `(outlet_id, status, placed_at)` for the kitchen query.
+Key constraints, enforced by the database and not only by the application: a client-supplied idempotency key is unique per customer; the order total must equal subtotal minus discount plus delivery fee, and the discount cannot exceed the subtotal; amounts are never negative; every status, role, kind and payment method is limited to its known values; foreign keys everywhere; and an index on `(outlet_id, status, placed_at)` serves the kitchen query.
 
 ---
 

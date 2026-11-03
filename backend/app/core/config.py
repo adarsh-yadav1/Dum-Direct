@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.env == "production"
 
+    @field_validator("database_url")
+    @classmethod
+    def _use_psycopg_driver(cls, value: str) -> str:
+        # Hosted databases usually hand out postgres:// or postgresql:// URLs.
+        # SQLAlchemy needs the driver named, so select psycopg (v3) explicitly.
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value[len(prefix) :]
+        return value
+
     @field_validator("env")
     @classmethod
     def _check_env(cls, value: str) -> str:

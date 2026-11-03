@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-to-a-long-random-string"
     cors_origins: str = "http://localhost:5173"
     cookie_secure: bool = False
+    # Password for every seeded demo account. It is a published demo credential, not a secret:
+    # set DEMO_PASSWORD on a deployed instance to change it.
+    demo_password: str = "dumdirect-demo-2026"
 
     @property
     def cors_origin_list(self) -> list[str]:

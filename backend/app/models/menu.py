@@ -81,7 +81,7 @@ class ItemVariant(Base):
 
     __tablename__ = "item_variants"
     __table_args__ = (
-        UniqueConstraint("item_id", "label", name="item_label"),
+        UniqueConstraint("item_id", "label", name="uq_item_variants_item_label"),
         CheckConstraint("price_paise > 0", name="price_positive"),
         CheckConstraint("serves >= 1", name="serves_positive"),
     )
@@ -99,7 +99,7 @@ class ItemVariant(Base):
 class Addon(Base):
     __tablename__ = "addons"
     __table_args__ = (
-        UniqueConstraint("item_id", "name", name="item_name"),
+        UniqueConstraint("item_id", "name", name="uq_addons_item_name"),
         CheckConstraint("price_paise >= 0", name="price_non_negative"),
     )
 

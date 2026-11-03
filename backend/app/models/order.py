@@ -46,7 +46,7 @@ class Order(Base):
         ),
         CheckConstraint("override_min IS NULL OR override_min > 0", name="override_positive"),
         # A repeated submit by the same customer returns the same order.
-        UniqueConstraint("user_id", "idempotency_key", name="user_idempotency_key"),
+        UniqueConstraint("user_id", "idempotency_key", name="uq_orders_user_idempotency_key"),
         # The kitchen board query: open orders for one outlet, oldest first.
         Index("ix_orders_outlet_status_placed", "outlet_id", "status", "placed_at"),
         Index("ix_orders_user_placed", "user_id", "placed_at"),

@@ -48,7 +48,7 @@ class Locality(Base):
 
     __tablename__ = "localities"
     __table_args__ = (
-        UniqueConstraint("name", "city", name="name_city"),
+        UniqueConstraint("name", "city", name="uq_localities_name_city"),
         CheckConstraint("latitude BETWEEN -90 AND 90", name="latitude_range"),
         CheckConstraint("longitude BETWEEN -180 AND 180", name="longitude_range"),
     )

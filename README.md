@@ -31,7 +31,7 @@ Work in progress. The repository is being built in the open, one reviewable comm
 
 ## Running locally
 
-Current state: the API exposes a health route and the web app shows whether it can reach the API. Ordering features are added in later commits.
+Current state: the database schema, sample data and demo accounts exist, the API exposes a health route, and the web app shows whether it can reach the API. Ordering and sign-in are added in later commits.
 
 ### Without Docker
 
@@ -42,7 +42,11 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
-python -m pytest            # run the tests
+python -m pytest            # run the tests (they use an in-memory SQLite database)
+
+# From here on a PostgreSQL 16 database is needed. Set DATABASE_URL (see .env.example), then:
+alembic upgrade head        # create the tables
+python -m app.seed          # load outlets, menu, demo accounts and the three sample orders
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -55,6 +59,22 @@ npm run dev                 # http://localhost:5173
 ```
 
 The web app should show "API is online". Interactive API documentation is at http://localhost:8000/docs.
+
+### Demo data
+
+`python -m app.seed` fills an empty database and does nothing if data already exists. `python -m app.seed --reset` rebuilds everything and shifts the three sample orders so they look current; one of them is 4 minutes past its promise. All people, outlets, FSSAI numbers and addresses are invented.
+
+Every demo account uses the password in `DEMO_PASSWORD` (the default is in `.env.example`). It is a published demo credential, not a secret. Sign-in is not built yet, so these accounts cannot be used to log in until it is.
+
+| Account | Role | Outlet |
+|---|---|---|
+| ananya@example.com | customer (gave marketing consent) | none |
+| rahul@example.com | customer | none |
+| kitchen.kondapur@example.com | kitchen | Kondapur |
+| kitchen.gachibowli@example.com | kitchen | Gachibowli cloud kitchen |
+| kitchen.kukatpally@example.com | kitchen | Kukatpally |
+| manager.kukatpally@example.com | manager | Kukatpally |
+| admin@example.com | admin | all |
 
 ### With Docker Compose
 

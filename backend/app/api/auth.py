@@ -11,7 +11,7 @@ from app.api.deps import current_user
 from app.core.clock import utcnow
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.core.rate_limit import LoginThrottle, get_login_throttle
+from app.core.rate_limit import Throttle, get_login_throttle
 from app.core.security import hash_password, needs_rehash, verify_password
 from app.core.tokens import SESSION_COOKIE_NAME, SESSION_LIFETIME, create_session_token
 from app.models import User
@@ -82,7 +82,7 @@ def login(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
-    throttle: LoginThrottle = Depends(get_login_throttle),
+    throttle: Throttle = Depends(get_login_throttle),
 ) -> User:
     key = f"{request.client.host if request.client else 'unknown'}|{body.email}"
     wait = throttle.retry_after(key)

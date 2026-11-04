@@ -16,7 +16,8 @@ class Settings(BaseSettings):
 
     env: str = "development"
     database_url: str = "postgresql+psycopg://dumdirect:change-me@localhost:5432/dumdirect"
-    redis_url: str = "redis://localhost:6379/0"
+    # Shared sign-in throttle. Empty means no Redis: counts then live in process memory.
+    redis_url: str = ""
     jwt_secret: str = "change-me-to-a-long-random-string"
     cors_origins: str = "http://localhost:5173"
     cookie_secure: bool = False

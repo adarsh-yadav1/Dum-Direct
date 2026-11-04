@@ -7,6 +7,7 @@ from app.core.db import get_db
 from app.core.tokens import SESSION_COOKIE_NAME, InvalidToken, read_session_token
 from app.models import User
 from app.models.enums import Role
+from app.services.access import can_access_outlet
 
 
 def current_user_optional(request: Request, db: Session = Depends(get_db)) -> User | None:
@@ -37,3 +38,10 @@ def require_roles(*roles: Role):
         return user
 
     return dependency
+
+
+def outlet_staff(outlet_id: int, user: User = Depends(current_user)) -> User:
+    """Kitchen or manager of this outlet, or an admin. `outlet_id` is the route's path parameter."""
+    if not can_access_outlet(user, outlet_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You do not have access to this outlet.")
+    return user

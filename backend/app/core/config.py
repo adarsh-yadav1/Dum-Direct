@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     env: str = "development"
     database_url: str = "postgresql+psycopg://dumdirect:change-me@localhost:5432/dumdirect"
+    # Folder holding the built web app. Empty serves the API alone.
+    static_dir: str = ""
     # Shared sign-in throttle. Empty means no Redis: counts then live in process memory.
     redis_url: str = ""
     jwt_secret: str = "change-me-to-a-long-random-string"

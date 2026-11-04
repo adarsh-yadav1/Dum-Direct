@@ -31,7 +31,7 @@ Work in progress. The repository is being built in the open, one reviewable comm
 
 ## Running locally
 
-Current state: the database schema, sample data and demo accounts exist, the API exposes a health route, and the web app shows whether it can reach the API. Ordering and sign-in are added in later commits.
+Current state: the database schema, sample data and demo accounts exist, the API exposes a health route, and the web app shows whether it can reach the API. Ordering is added in later commits.
 
 ### Without Docker
 
@@ -64,7 +64,7 @@ The web app should show "API is online". Interactive API documentation is at htt
 
 `python -m app.seed` fills an empty database and does nothing if data already exists. `python -m app.seed --reset` rebuilds everything and shifts the three sample orders so they look current; one of them is 4 minutes past its promise. All people, outlets, FSSAI numbers and addresses are invented.
 
-Every demo account uses the password in `DEMO_PASSWORD` (the default is in `.env.example`). It is a published demo credential, not a secret. Sign-in is not built yet, so these accounts cannot be used to log in until it is.
+Every demo account uses the password in `DEMO_PASSWORD` (the default is in `.env.example`). It is a published demo credential, not a secret. Sign in with `POST /auth/login` (try it at http://localhost:8000/docs).
 
 | Account | Role | Outlet |
 |---|---|---|
@@ -75,6 +75,14 @@ Every demo account uses the password in `DEMO_PASSWORD` (the default is in `.env
 | kitchen.kukatpally@example.com | kitchen | Kukatpally |
 | manager.kukatpally@example.com | manager | Kukatpally |
 | admin@example.com | admin | all |
+
+### Sign-in and access control
+
+- `POST /auth/register` creates customer accounts only; unknown fields such as `role` are rejected. Marketing opt-in is off unless the customer ticks it, and the time it was given is recorded.
+- `POST /auth/login`, `POST /auth/logout` and `GET /auth/me`. The session is a 12-hour token in an httpOnly cookie; the user's role and outlet are read from the database on every request.
+- Kitchen and manager accounts can reach only their own outlet; admins reach all; customers reach only their own orders. Only an outlet's manager or an admin may override a promised time.
+- Protections: Argon2id password hashes, one identical answer for a wrong password and an unknown email, a refusal of cross-site writes from origins not in `CORS_ORIGINS`, and a throttle of five failed sign-ins per address and email in 15 minutes.
+- Known limit: the throttle counts live in the server's memory, so they reset on restart and are not shared between instances.
 
 ### With Docker Compose
 

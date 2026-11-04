@@ -1,6 +1,9 @@
-/** Base URL of the API. Set VITE_API_BASE_URL at build time. */
-export const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+/**
+ * Base URL of the API. By default the app calls /api on its own address, in development
+ * through the Vite proxy and in production because the server serves both. One address keeps
+ * the sign-in cookie first-party. Set VITE_API_BASE_URL only to reach an API elsewhere.
+ */
+export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export class ApiError extends Error {
   readonly status: number

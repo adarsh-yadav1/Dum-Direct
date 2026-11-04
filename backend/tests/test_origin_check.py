@@ -20,3 +20,23 @@ def test_a_write_with_no_origin_is_not_a_browser_acting_for_another_site(client:
 
 def test_reads_are_never_blocked_by_origin(client: TestClient):
     assert client.get("/health", headers={"Origin": "http://evil.example"}).status_code == 200
+
+
+# ----- the site's own origin ---------------------------------------------------
+
+
+def test_a_write_from_the_servers_own_origin_is_allowed(client: TestClient):
+    # Browsers send Origin on the site's own writes too. The test client addresses "testserver".
+    response = client.post("/auth/login", json=LOGIN, headers={"Origin": "http://testserver"})
+    assert response.status_code == 401  # reached the route
+
+
+def test_look_alike_origins_are_refused(client: TestClient):
+    for origin in (
+        "http://testserver.evil.example",
+        "http://testserver:8000",
+        "http://evil.example/testserver",
+        "null",
+    ):
+        response = client.post("/auth/login", json=LOGIN, headers={"Origin": origin})
+        assert response.status_code == 403, origin

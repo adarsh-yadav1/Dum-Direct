@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # set DEMO_PASSWORD on a deployed instance to change it.
     demo_password: str = "dumdirect-demo-2026"
 
+    # Travel time added to the estimate per kilometre of delivery distance (assumption A11).
+    delivery_minutes_per_km: float = 3.0
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

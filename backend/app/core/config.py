@@ -5,8 +5,9 @@ Nothing secret has a real default: production must set its own values.
 """
 
 from functools import lru_cache
+from typing import Self
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +20,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-to-a-long-random-string"
     cors_origins: str = "http://localhost:5173"
     cookie_secure: bool = False
+    # "none" is needed when the web app and the API are on different sites; it requires
+    # COOKIE_SECURE=true. "lax" suits one site and local development.
+    cookie_samesite: str = "lax"
     # Password for every seeded demo account. It is a published demo credential, not a secret:
     # set DEMO_PASSWORD on a deployed instance to change it.
     demo_password: str = "dumdirect-demo-2026"
@@ -40,6 +44,20 @@ class Settings(BaseSettings):
             if value.startswith(prefix):
                 return "postgresql+psycopg://" + value[len(prefix) :]
         return value
+
+    @field_validator("cookie_samesite")
+    @classmethod
+    def _check_samesite(cls, value: str) -> str:
+        value = value.lower()
+        if value not in {"lax", "strict", "none"}:
+            raise ValueError("COOKIE_SAMESITE must be lax, strict or none")
+        return value
+
+    @model_validator(mode="after")
+    def _samesite_none_needs_secure(self) -> Self:
+        if self.cookie_samesite == "none" and not self.cookie_secure:
+            raise ValueError("COOKIE_SAMESITE=none requires COOKIE_SECURE=true")
+        return self
 
     @field_validator("env")
     @classmethod

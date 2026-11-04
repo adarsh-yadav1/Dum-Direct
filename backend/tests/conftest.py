@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.db import get_db
+from app.core.rate_limit import get_login_throttle
 from app.main import app
 from app.models import Base
 
@@ -23,6 +24,11 @@ def make_sqlite_engine() -> Engine:
 
     Base.metadata.create_all(engine)
     return engine
+
+
+@pytest.fixture(autouse=True)
+def fresh_login_throttle() -> None:
+    get_login_throttle.cache_clear()
 
 
 @pytest.fixture()

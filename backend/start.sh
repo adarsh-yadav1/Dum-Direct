@@ -11,4 +11,8 @@ if [ "${SEED_ON_START:-true}" = "true" ]; then
   python -m app.seed
 fi
 
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
+# Behind a host's proxy every request would appear to come from the proxy. Set
+# FORWARDED_ALLOW_IPS=* on a host whose proxy is the only way in, so the real client
+# address (used to throttle sign-ins) is read from X-Forwarded-For.
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" \
+  --proxy-headers --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-127.0.0.1}"

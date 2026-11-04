@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -11,6 +11,7 @@ from app.api.deps import current_user
 from app.core.clock import utcnow
 from app.core.config import get_settings
 from app.core.db import get_db
+from app.core.rate_limit import LoginThrottle, get_login_throttle
 from app.core.security import hash_password, needs_rehash, verify_password
 from app.core.tokens import SESSION_COOKIE_NAME, SESSION_LIFETIME, create_session_token
 from app.models import User
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 _DUPLICATE = "An account with this email already exists."
 _BAD_LOGIN = "Invalid email or password."
+_TOO_MANY = "Too many failed sign-in attempts. Try again later."
 
 
 @lru_cache
@@ -75,12 +77,27 @@ def register(body: RegisterRequest, response: Response, db: Session = Depends(ge
 
 
 @router.post("/login", response_model=UserOut)
-def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)) -> User:
+def login(
+    body: LoginRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    throttle: LoginThrottle = Depends(get_login_throttle),
+) -> User:
+    key = f"{request.client.host if request.client else 'unknown'}|{body.email}"
+    wait = throttle.retry_after(key)
+    if wait:  # checked first, so a blocked client costs no password hashing
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS, _TOO_MANY, headers={"Retry-After": str(wait)}
+        )
+
     user = db.scalar(select(User).where(User.email == body.email))
     password_ok = verify_password(body.password, user.password_hash if user else _dummy_hash())
     if user is None or not password_ok:
+        throttle.record_failure(key)
         # One message for both cases: the response must not reveal which emails have accounts.
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, _BAD_LOGIN)
+    throttle.reset(key)
 
     if needs_rehash(user.password_hash):  # upgrade old hashes quietly after a correct password
         user.password_hash = hash_password(body.password)

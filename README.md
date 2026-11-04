@@ -47,7 +47,7 @@ python -m pytest            # run the tests (they use an in-memory SQLite databa
 # From here on a PostgreSQL 16 database is needed. Set DATABASE_URL (see .env.example), then:
 alembic upgrade head        # create the tables
 python -m app.seed          # load outlets, menu, demo accounts and the three sample orders
-uvicorn app.main:app --reload --port 8000
+uvicorn app.site:site --reload --port 8000   # the API, under /api
 ```
 
 Frontend (Node 22) in a second terminal:
@@ -58,13 +58,13 @@ npm install
 npm run dev                 # http://localhost:5173
 ```
 
-The web app should show "API is online". Interactive API documentation is at http://localhost:8000/docs.
+The web app should show "API is online". Interactive API documentation is at http://localhost:8000/api/docs.
 
 ### Demo data
 
 `python -m app.seed` fills an empty database and does nothing if data already exists. `python -m app.seed --reset` rebuilds everything and shifts the three sample orders so they look current; one of them is 4 minutes past its promise. All people, outlets, FSSAI numbers and addresses are invented.
 
-Every demo account uses the password in `DEMO_PASSWORD` (the default is in `.env.example`). It is a published demo credential, not a secret. Sign in with `POST /auth/login` (try it at http://localhost:8000/docs).
+Every demo account uses the password in `DEMO_PASSWORD` (the default is in `.env.example`). It is a published demo credential, not a secret. Sign in with `POST /auth/login` (try it at http://localhost:8000/api/docs).
 
 | Account | Role | Outlet |
 |---|---|---|
@@ -78,17 +78,19 @@ Every demo account uses the password in `DEMO_PASSWORD` (the default is in `.env
 
 ### Sign-in and access control
 
-- `POST /auth/register` creates customer accounts only; unknown fields such as `role` are rejected. Marketing opt-in is off unless the customer ticks it, and the time it was given is recorded.
-- `POST /auth/login`, `POST /auth/logout` and `GET /auth/me`. The session is a 12-hour token in an httpOnly cookie; the user's role and outlet are read from the database on every request.
+- All API routes live under `/api`. `POST /api/auth/register` creates customer accounts only; unknown fields such as `role` are rejected. Marketing opt-in is off unless the customer ticks it, and the time it was given is recorded.
+- `POST /api/auth/login`, `POST /api/auth/logout` and `GET /api/auth/me`. The session is a 12-hour token in an httpOnly cookie; the user's role and outlet are read from the database on every request.
 - Kitchen and manager accounts can reach only their own outlet; admins reach all; customers reach only their own orders. Only an outlet's manager or an admin may override a promised time.
 - Protections: Argon2id password hashes, one identical answer for a wrong password and an unknown email, a refusal of cross-site writes from origins not in `CORS_ORIGINS`, and a throttle of five failed sign-ins per address and email in 15 minutes.
-- Known limit: the throttle counts live in the server's memory, so they reset on restart and are not shared between instances.
+- With `REDIS_URL` set, the throttle counts are shared between server instances and survive restarts. Without it, or while Redis is down, they fall back to the server's memory, which protects one instance but resets on restart.
 
 ### With Docker Compose
 
 ```bash
 cp .env.example .env
-docker compose up --build   # web on http://localhost:5173, API on http://localhost:8000
+docker compose up --build   # one container serves the web app and the API on http://localhost:8000
 ```
+
+The web app and the API are served from one address on purpose. The sign-in cookie then stays first-party, which browsers that block third-party cookies (Safari, iPhone) require; it also removes the need for CORS in production. The same shape is used for deployment: one container, plus PostgreSQL and Redis.
 
 Status of this path: `docker compose config` passes, but the images have not yet been built and run end to end. This line is updated once they have.

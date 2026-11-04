@@ -1,6 +1,6 @@
-# Local development stack: PostgreSQL, Redis, the API and the web app.
-# Values come from a local .env file (copy .env.example). The defaults below
-# are for local use only and must never be used in a deployed environment.
+# Local stack: PostgreSQL, Redis and one app container that serves the web app and the API
+# together on http://localhost:8000. Values come from a local .env file (copy .env.example).
+# The defaults below are for local use only and must never be used in a deployed environment.
 
 services:
   db:
@@ -25,14 +25,13 @@ services:
       timeout: 3s
       retries: 10
 
-  api:
-    build: ./backend
+  app:
+    build: .
     environment:
       ENV: ${ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-dumdirect}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-dumdirect}
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SEED_ON_START: ${SEED_ON_START:-true}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-dumdirect-demo-2026}
@@ -43,16 +42,6 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-
-  web:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
-    depends_on:
-      - api
-    ports:
-      - "5173:80"
 
 volumes:
   pgdata:

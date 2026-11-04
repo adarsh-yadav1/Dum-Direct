@@ -5,3 +5,4 @@ SQLAlchemy==2.1.6
 alembic==1.20.1
 psycopg[binary]==3.3.7
 argon2-cffi==25.1.0
+PyJWT==2.15.1

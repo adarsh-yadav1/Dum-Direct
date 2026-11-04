@@ -61,6 +61,7 @@ class Decision:
         return {
             "chosen": self.chosen.outlet.name if self.status == SERVICEABLE and self.chosen else None,
             "reason": reason,
+            "rerouted_from": self.rerouted_from.name if self.rerouted_from else None,
             "candidates": [
                 {
                     "outlet": c.outlet.name,

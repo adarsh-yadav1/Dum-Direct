@@ -11,9 +11,10 @@ from app.core.clock import utcnow
 from app.core.db import get_db
 from app.models import Order, Outlet, User
 from app.models.enums import Role
-from app.schemas.orders import OrderCreate, OrderLineOut, OrderOut, PaymentOut
+from app.schemas.orders import OrderCreate, OrderLineOut, OrderOut, PaymentOut, PayRequest
 from app.schemas.serviceability import OutletOut
 from app.services.orders import OrderError, create_order
+from app.services.payments import PaymentError, pay_order
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -85,3 +86,17 @@ def view_order(
     code: str, user: User = Depends(require_roles(Role.CUSTOMER)), db: Session = Depends(get_db)
 ) -> OrderOut:
     return present(db, own_order(db, user, code))
+
+
+@router.post("/{code}/pay", response_model=OrderOut)
+def pay(
+    code: str,
+    body: PayRequest,
+    user: User = Depends(require_roles(Role.CUSTOMER)),
+    db: Session = Depends(get_db),
+) -> OrderOut:
+    try:
+        order = pay_order(db, code, user.id, body.method, body.outcome)
+    except PaymentError as error:
+        raise HTTPException(error.status_code, {"code": error.code, "message": error.message}) from None
+    return present(db, order)

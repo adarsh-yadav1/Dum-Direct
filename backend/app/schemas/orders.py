@@ -2,7 +2,7 @@
 the server works all of those out, and unknown fields are rejected."""
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
@@ -40,6 +40,12 @@ class OrderCreate(_Strict):
     address_line: Annotated[str, StringConstraints(strip_whitespace=True, min_length=5, max_length=200)]
     landmark: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] | None = None
     lines: list[OrderLineIn] = Field(min_length=1, max_length=30)
+
+
+class PayRequest(_Strict):
+    method: Literal["upi", "card"]
+    # The gateway is a mock: the caller says which result to simulate.
+    outcome: Literal["success", "failure"] = "success"
 
 
 class OrderLineOut(BaseModel):

@@ -93,4 +93,4 @@ docker compose up --build   # one container serves the web app and the API on ht
 
 The web app and the API are served from one address on purpose. The sign-in cookie then stays first-party, which browsers that block third-party cookies (Safari, iPhone) require; it also removes the need for CORS in production. The same shape is used for deployment: one container, plus PostgreSQL and Redis.
 
-Status of this path: `docker compose config` passes, but the images have not yet been built and run end to end. This line is updated once they have.
+Status of this path: built and run on Ubuntu with Docker Engine and Compose. The container log shows the migration, the seed and the server start, and the health check passes.

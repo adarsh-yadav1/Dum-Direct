@@ -70,3 +70,30 @@ def test_only_the_owner_can_pay(client, engine, order):
 def test_payment_needs_sign_in(client, order):
     client.post("/auth/logout")
     assert pay(client, order["public_code"]).status_code == 401
+
+
+def test_payment_sets_the_estimate_and_promise(client, engine, order):
+    from datetime import datetime
+
+    data = pay(client, order["public_code"]).json()
+    with Session(engine) as db:
+        stored = db.scalars(select(Order)).one()
+        assert stored.ai_estimate_min and stored.ai_estimate_min >= 20
+        promised, placed = datetime.fromisoformat(data["promised_at"]), datetime.fromisoformat(data["placed_at"])
+        # prep (at least the outlet minimum of 20) plus travel
+        assert (promised - placed).total_seconds() >= 20 * 60
+        event = db.scalars(select(OrderEvent).where(OrderEvent.type == "order_new")).one()
+        assert event.payload_json["prep_estimate_min"] == stored.ai_estimate_min
+
+
+def test_a_busy_kitchen_gets_a_later_promise(client, engine, seeded, noon):
+    from datetime import datetime
+
+    login(client)
+    v = variant(engine, "Veg biryani")
+    promises = []
+    for n in range(1, 4):
+        placed = place(client, body(engine, [{"variant_id": v.id, "qty": 20}]), f"key-0000-000{n}").json()
+        data = pay(client, placed["public_code"]).json()
+        promises.append((datetime.fromisoformat(data["promised_at"]) - datetime.fromisoformat(data["placed_at"])).total_seconds())
+    assert promises[0] < promises[-1]

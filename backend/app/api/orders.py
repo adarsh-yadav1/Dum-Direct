@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
-from app.core.clock import utcnow
+from app.core.clock import as_utc, utcnow
 from app.core.db import get_db
 from app.models import Order, Outlet, User
 from app.models.enums import Role
@@ -48,8 +48,8 @@ def present(db: Session, order: Order) -> OrderOut:
         delivery_fee_paise=order.delivery_fee_paise,
         total_paise=order.total_paise,
         gst_included_paise=order.gst_included_paise,
-        placed_at=order.placed_at,
-        promised_at=order.promised_at,
+        placed_at=as_utc(order.placed_at),
+        promised_at=as_utc(order.promised_at) if order.promised_at else None,
         payment=PaymentOut(method=payment.method, status=payment.status, amount_paise=payment.amount_paise)
         if payment
         else None,

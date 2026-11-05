@@ -12,8 +12,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
-from app.models import Order, OrderEvent, Payment
+from app.core.config import get_settings
+from app.models import Order, OrderEvent, Outlet, Payment
 from app.models.enums import OrderStatus, PaymentStatus
+from app.services.estimator import estimate_order
 from app.services.order_state import check_transition
 
 
@@ -66,12 +68,21 @@ def pay_order(db: Session, order_code: str, user_id: int, method: str, outcome: 
         )
     )
     if target is OrderStatus.NEW:
+        now = utcnow()
+        prep, promised = estimate_order(
+            db, order, db.get(Outlet, order.outlet_id), now, get_settings().delivery_minutes_per_km
+        )
+        order.ai_estimate_min, order.promised_at = prep, promised
         db.add(
             OrderEvent(
                 order_id=order.id,
                 outlet_id=order.outlet_id,
                 type="order_new",
-                payload_json={"public_code": order.public_code},
+                payload_json={
+                    "public_code": order.public_code,
+                    "prep_estimate_min": prep,
+                    "promised_at": promised.isoformat(),
+                },
             )
         )
     db.commit()

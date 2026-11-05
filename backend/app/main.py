@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.kitchen import router as kitchen_router
+from app.api.localities import router as localities_router
 from app.api.menu import router as menu_router
 from app.api.orders import router as orders_router
 from app.api.serviceability import router as serviceability_router
@@ -43,5 +44,6 @@ def health() -> dict[str, str]:
 app.include_router(auth_router)
 app.include_router(serviceability_router)
 app.include_router(menu_router)
+app.include_router(localities_router)
 app.include_router(orders_router)
 app.include_router(kitchen_router)

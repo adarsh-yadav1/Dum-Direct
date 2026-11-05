@@ -71,7 +71,8 @@ def override_promise(db: Session, order: Order, minutes: int, actor_id: int, now
     order.override_min, order.override_by_user_id = minutes, actor_id
     order.late_alerted_at = None  # a fresh promise starts a fresh clock
     _event(db, order, "promise_overridden", actor_id,
-           {"minutes_from_now": minutes, "previous": previous.isoformat() if previous else None})
+           {"minutes_from_now": minutes, "promised_at": order.promised_at.isoformat(),
+            "previous": previous.isoformat() if previous else None})
     db.commit()
     return order
 

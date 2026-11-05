@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     # Travel time added to the estimate per kilometre of delivery distance (assumption A11).
     delivery_minutes_per_km: float = 3.0
 
+    # Live updates: how often a stream checks for news, how often it sends a keep-alive, and
+    # how long it lives before the browser reconnects. The late-order sweep interval (0 = off).
+    stream_poll_seconds: float = 1.0
+    stream_heartbeat_seconds: float = 15.0
+    stream_max_seconds: float = 300.0
+    late_sweep_seconds: float = 30.0
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

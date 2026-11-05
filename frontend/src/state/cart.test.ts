@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { MAX_LINES, MAX_QTY_PER_LINE, cartCount, cartReducer, cartTotal, lineKey, lineTotal, type CartLine } from './cart'
 
-const base = {
+const base: Omit<CartLine, 'key'> = {
   itemId: 1,
   variantId: 10,
   name: 'Chicken dum biryani',

@@ -1,57 +1,30 @@
-import { useEffect, useState } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router'
 
-import { api } from './lib/api'
+import { Layout } from './components/Layout'
+import { Cart } from './pages/Cart'
+import { SignIn } from './pages/SignIn'
+import { Storefront } from './pages/Storefront'
+import { AuthProvider } from './state/AuthContext'
+import { CartProvider } from './state/CartContext'
+import { LocationProvider } from './state/LocationContext'
 
-type ApiState = 'checking' | 'online' | 'offline'
-
-function App() {
-  const [apiState, setApiState] = useState<ApiState>('checking')
-
-  useEffect(() => {
-    let cancelled = false
-    api<{ status: string }>('/health')
-      .then(() => !cancelled && setApiState('online'))
-      .catch(() => !cancelled && setApiState('offline'))
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
+export default function App() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4 py-10">
-      <header className="space-y-2">
-        <p className="text-sm font-medium tracking-wide text-accent uppercase">DumDirect</p>
-        <h1 className="text-3xl font-semibold text-ink">Hyderabadi food, ordered directly.</h1>
-        <p className="text-muted">
-          The ordering app is being built. This page confirms that the frontend and the API are
-          connected.
-        </p>
-      </header>
-
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3"
-      >
-        <span
-          aria-hidden="true"
-          className={
-            'size-2.5 rounded-full ' +
-            (apiState === 'online'
-              ? 'bg-veg'
-              : apiState === 'offline'
-                ? 'bg-late'
-                : 'bg-warn')
-          }
-        />
-        <span className="text-sm text-ink">
-          {apiState === 'checking' && 'Checking the API…'}
-          {apiState === 'online' && 'API is online'}
-          {apiState === 'offline' && 'API is not reachable. Start the backend and reload.'}
-        </span>
-      </div>
-    </main>
+    <BrowserRouter>
+      <AuthProvider>
+        <LocationProvider>
+          <CartProvider>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route index element={<Storefront />} />
+                <Route path="cart" element={<Cart />} />
+                <Route path="signin" element={<SignIn />} />
+                <Route path="*" element={<Storefront />} />
+              </Route>
+            </Routes>
+          </CartProvider>
+        </LocationProvider>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
-
-export default App

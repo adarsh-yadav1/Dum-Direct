@@ -1,49 +1,69 @@
 @import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/public-sans";
 
 /*
   Design tokens.
-  A restrained palette: warm paper, near-black ink and one accent.
-  Green and red are reserved for meaning (veg and non-veg marks, late orders),
-  so colour never appears without a purpose.
+  A cool pearl page, deep indigo ink (bidri metalwork) and one saffron accent that is spent on a
+  single thing: the delivery promise. Green and red are reserved for meaning (veg and non-veg
+  marks, late orders), so colour never appears without a purpose.
 */
 @theme {
-  --color-paper: #fbf8f3;
+  --color-pearl: #f3f4f8;
   --color-surface: #ffffff;
-  --color-line: #e9e2d8;
-  --color-ink: #1f1a17;
-  --color-muted: #6b6259;
-  --color-accent: #9a3412;
-  --color-accent-strong: #7c2a0e;
+  --color-line: #dde0ea;
+  --color-ink: #161a3a;
+  --color-muted: #565c7a;
+  --color-indigo: #2b2f8a;
+  --color-indigo-strong: #1f2370;
+  --color-indigo-wash: #e6e8f6;
+  --color-saffron: #f2a60d;
+  --color-saffron-ink: #7d4b00;
 
-  --color-veg: #2e7d32;
-  --color-nonveg: #b3261e;
-  --color-warn: #b7791f;
+  --color-veg: #1e7a34;
+  --color-nonveg: #a8321f;
   --color-late: #b3261e;
+  --color-warn-wash: #fff3d6;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Public Sans Variable", ui-sans-serif, sans-serif;
 }
 
 @layer base {
   html {
-    background-color: var(--color-paper);
+    background-color: var(--color-pearl);
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 7.5rem; /* room for the sticky header and category bar */
   }
 
   body {
     margin: 0;
     min-height: 100dvh;
+    background-color: var(--color-pearl);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
   }
 
   /* Visible focus for keyboard and switch users. */
   :focus-visible {
-    outline: 3px solid var(--color-accent);
+    outline: 3px solid var(--color-indigo);
     outline-offset: 2px;
   }
 
-  /* Prices line up in columns. */
-  .tabular {
-    font-variant-numeric: tabular-nums;
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
   }
+
+  dialog::backdrop { background: rgb(22 26 58 / 0.55); }
+}
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 }

@@ -57,6 +57,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
     throw describe(body, response.status)
   }
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 

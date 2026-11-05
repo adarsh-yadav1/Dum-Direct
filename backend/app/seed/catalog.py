@@ -14,6 +14,7 @@ from app.models import (
     Outlet,
     OutletItem,
 )
+from app.seed.images import IMAGE_URLS
 from app.seed.catalog_data import (
     CATEGORIES,
     CITY_PRICE_PERCENT,
@@ -56,7 +57,7 @@ def seed_catalog(db: Session) -> None:
             slug=slugify(spec.name),
             name=spec.name,
             description=spec.description,
-            image_url=None,  # photos are added with the customer app
+            image_url=IMAGE_URLS.get(spec.name),  # linked, not stored: see seed/images.py
             is_veg=spec.is_veg,
             spice_level=spec.spice_level,
             allergens=list(spec.allergens),

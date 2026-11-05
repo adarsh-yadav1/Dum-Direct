@@ -8,6 +8,8 @@ Run this module's `site` in production (`uvicorn app.site:site`). `app.main:app`
 plain API, which is what the tests use.
 """
 
+import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from starlette.applications import Starlette
@@ -19,6 +21,8 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.config import get_settings
+from app.core.db import get_session_factory
+from app.core.sweeper import run_sweeper
 from app.main import app as api
 
 _SECURITY_HEADERS = {
@@ -69,11 +73,23 @@ class SinglePageAppFiles(StaticFiles):
         return response
 
 
+@asynccontextmanager
+async def lifespan(_: Starlette):
+    """Start the late-order sweeper with the site and stop it cleanly on shutdown."""
+    interval = get_settings().late_sweep_seconds
+    task = asyncio.create_task(run_sweeper(get_session_factory(), interval)) if interval > 0 else None
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
+
+
 def create_site(static_dir: str) -> Starlette:
     routes = [Mount("/api", app=api)]
     if static_dir and (Path(static_dir) / "index.html").is_file():
         routes.append(Mount("/", app=SinglePageAppFiles(directory=static_dir, html=True)))
-    return Starlette(routes=routes, middleware=[Middleware(SecurityHeaders)])
+    return Starlette(routes=routes, middleware=[Middleware(SecurityHeaders)], lifespan=lifespan)
 
 
 site = create_site(get_settings().static_dir)

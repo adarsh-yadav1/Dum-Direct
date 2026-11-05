@@ -27,3 +27,8 @@ def get_db() -> Iterator[Session]:
     """FastAPI dependency: one session per request, always closed."""
     with get_session_factory()() as session:
         yield session
+
+
+def get_stream_sessions() -> "sessionmaker[Session]":
+    """FastAPI dependency for streams: a way to open short sessions, not one held for the stream."""
+    return get_session_factory()

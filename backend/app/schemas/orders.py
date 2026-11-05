@@ -78,3 +78,5 @@ class OrderOut(BaseModel):
     placed_at: datetime
     promised_at: datetime | None
     payment: PaymentOut | None
+    # Pass to the order's stream as ?after= to receive every update after this view.
+    last_event_id: int

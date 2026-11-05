@@ -1,13 +1,15 @@
 """The kitchen's view of one outlet. Every route checks the caller belongs to that outlet."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_user, outlet_staff
 from app.core.clock import as_utc, utcnow
-from app.core.db import get_db
+from app.api.stream import AfterQuery, LastEventId, cursor, event_stream, sse_response
+from app.core.db import get_db, get_stream_sessions
 from app.models import Order, User
 from app.schemas.kitchen import AvailabilityRequest, Board, BoardLine, BoardOrder, MoveRequest, PromiseRequest
+from app.services.events import events_after, latest_event_id
 from app.services.access import can_override_estimate
 from app.services.kitchen import (
     KitchenError,
@@ -53,7 +55,9 @@ def board_order(order: Order, now) -> BoardOrder:
 def get_board(outlet_id: int, _: User = Depends(outlet_staff), db: Session = Depends(get_db)) -> Board:
     now = utcnow()
     sweep_late_orders(db, now)
-    return Board(outlet_id=outlet_id, orders=[board_order(o, now) for o in open_orders(db, outlet_id)])
+    # Read the cursor first: an update landing while the board loads is then replayed, never lost.
+    position = latest_event_id(db, outlet_id=outlet_id)
+    return Board(outlet_id=outlet_id, cursor=position, orders=[board_order(o, now) for o in open_orders(db, outlet_id)])
 
 
 @router.post("/orders/{code}/status", response_model=BoardOrder)
@@ -90,3 +94,31 @@ def change_availability(
     except KitchenError as error:
         raise _fail(error) from None
     return {"item_id": row.item_id, "is_available": row.is_available}
+
+
+def _outlet_fetch(outlet_id: int):
+    return lambda db, after: events_after(db, after, outlet_id=outlet_id)
+
+
+@router.get("/events")
+def poll_events(
+    outlet_id: int, after: int = 0, _: User = Depends(outlet_staff), db: Session = Depends(get_db)
+) -> dict:
+    """Polling fallback: events after a cursor, as plain JSON."""
+    events = events_after(db, max(after, 0), outlet_id=outlet_id)
+    return {"events": events, "cursor": max((e["id"] for e in events), default=max(after, 0))}
+
+
+@router.get("/stream")
+async def stream(
+    outlet_id: int,
+    request: Request,
+    last_event_id: LastEventId = None,
+    after: AfterQuery = None,
+    _: User = Depends(outlet_staff),
+    open_session=Depends(get_stream_sessions),
+):
+    """Live events for one outlet. The caller must belong to it, checked when the stream opens."""
+    with open_session() as db:
+        start = cursor(last_event_id, after, lambda: latest_event_id(db, outlet_id=outlet_id))
+    return sse_response(event_stream(request, open_session, _outlet_fetch(outlet_id), start))

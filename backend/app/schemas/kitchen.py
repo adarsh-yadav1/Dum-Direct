@@ -43,4 +43,6 @@ class BoardOrder(BaseModel):
 
 class Board(BaseModel):
     outlet_id: int
+    # Pass to the stream as ?after= so no update between loading the board and connecting is missed.
+    cursor: int
     orders: list[BoardOrder]

@@ -2,17 +2,19 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
 from app.core.clock import as_utc, utcnow
-from app.core.db import get_db
+from app.api.stream import AfterQuery, LastEventId, cursor, event_stream, sse_response
+from app.core.db import get_db, get_stream_sessions
 from app.models import Order, Outlet, User
 from app.models.enums import Role
 from app.schemas.orders import OrderCreate, OrderLineOut, OrderOut, PaymentOut, PayRequest
 from app.schemas.serviceability import OutletOut
+from app.services.events import events_after, latest_event_id
 from app.services.orders import OrderError, create_order
 from app.services.payments import PaymentError, pay_order
 
@@ -53,6 +55,7 @@ def present(db: Session, order: Order) -> OrderOut:
         payment=PaymentOut(method=payment.method, status=payment.status, amount_paise=payment.amount_paise)
         if payment
         else None,
+        last_event_id=latest_event_id(db, order_id=order.id),
     )
 
 
@@ -100,3 +103,31 @@ def pay(
     except PaymentError as error:
         raise HTTPException(error.status_code, {"code": error.code, "message": error.message}) from None
     return present(db, order)
+
+
+@router.get("/{code}/events")
+def poll_order_events(
+    code: str, after: int = 0, user: User = Depends(require_roles(Role.CUSTOMER)), db: Session = Depends(get_db)
+) -> dict:
+    """Polling fallback: this order's customer-visible events after a cursor."""
+    order = own_order(db, user, code)
+    events = events_after(db, max(after, 0), order_id=order.id, customer=True)
+    return {"events": events, "cursor": max((e["id"] for e in events), default=max(after, 0))}
+
+
+@router.get("/{code}/stream")
+async def stream_order(
+    code: str,
+    request: Request,
+    last_event_id: LastEventId = None,
+    after: AfterQuery = None,
+    user: User = Depends(require_roles(Role.CUSTOMER)),
+    open_session=Depends(get_stream_sessions),
+):
+    """Live updates for the customer's own order. Anyone else's order is reported as missing."""
+    with open_session() as db:
+        order_id = own_order(db, user, code).id
+        start = cursor(last_event_id, after, lambda: latest_event_id(db, order_id=order_id))
+    return sse_response(
+        event_stream(request, open_session, lambda db, a: events_after(db, a, order_id=order_id, customer=True), start)
+    )

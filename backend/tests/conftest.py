@@ -6,7 +6,7 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.core.db import get_db
+from app.core.db import get_db, get_stream_sessions
 from app.core.rate_limit import get_login_throttle
 from app.main import app
 from app.models import Base
@@ -53,6 +53,7 @@ def client(engine: Engine) -> Iterator[TestClient]:
             yield db
 
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_stream_sessions] = lambda: (lambda: Session(engine, expire_on_commit=False))
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

@@ -2,6 +2,8 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 
 import { Layout } from './components/Layout'
 import { Cart } from './pages/Cart'
+import { Checkout } from './pages/Checkout'
+import { OrderPage } from './pages/OrderPage'
 import { SignIn } from './pages/SignIn'
 import { Storefront } from './pages/Storefront'
 import { AuthProvider } from './state/AuthContext'
@@ -18,6 +20,8 @@ export default function App() {
               <Route element={<Layout />}>
                 <Route index element={<Storefront />} />
                 <Route path="cart" element={<Cart />} />
+                <Route path="checkout" element={<Checkout />} />
+                <Route path="orders/:code" element={<OrderPage />} />
                 <Route path="signin" element={<SignIn />} />
                 <Route path="*" element={<Storefront />} />
               </Route>

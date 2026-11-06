@@ -46,6 +46,7 @@ export function Cart() {
       <p className="text-sm text-muted">Delivery fee and the final total are confirmed when you place the order.</p>
       <div className="flex gap-3">
         <Link to="/" className={button.secondary}>Add more</Link>
+        <Link to="/checkout" className={button.primary + ' flex-1'}>Checkout</Link>
       </div>
     </main>
   )

@@ -26,9 +26,9 @@ export function SignIn() {
     setBusy(true)
     setError(null)
     try {
-      if (mode === 'signin') await login(email, password)
-      else await register({ name, email, password, phone, marketing_opt_in: marketing })
-      void navigate(next, { replace: true })
+      const user = mode === 'signin' ? await login(email, password) : await register({ name, email, password, phone, marketing_opt_in: marketing })
+      // Staff go to the kitchen screen unless they were sent here from somewhere specific.
+      void navigate(user.role !== 'customer' && next === '/' ? '/kitchen' : next, { replace: true })
     } catch (e) {
       setError((e as Error).message)
     } finally {

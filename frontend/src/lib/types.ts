@@ -104,3 +104,20 @@ export type Order = {
   payment: { method: string; status: string; amount_paise: number } | null
   last_event_id: number
 }
+
+export type BoardLine = { name: string; variant_label: string; qty: number; addons: string[]; notes: string | null }
+
+export type BoardOrder = {
+  public_code: string
+  status: OrderStatus
+  placed_at: string
+  promised_at: string | null
+  minutes_late: number
+  late_alerted: boolean
+  overridden: boolean
+  lines: BoardLine[]
+}
+
+export type Board = { outlet_id: number; cursor: number; orders: BoardOrder[] }
+export type OutletRef = { id: number; name: string; city: string }
+export type Dish = { item_id: number; name: string; category: string; is_available: boolean }

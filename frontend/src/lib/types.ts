@@ -9,6 +9,7 @@ export type Outlet = {
   address_line: string
   fssai_no: string
   delivery_radius_km: number
+  delivery_fee_paise: number
 }
 
 export type Variant = { id: number; label: string; serves: number; price_paise: number }
@@ -65,4 +66,41 @@ export type User = {
   role: 'customer' | 'kitchen' | 'manager' | 'admin'
   outlet_id: number | null
   marketing_opt_in: boolean
+}
+
+export type OrderLine = {
+  name: string
+  variant_label: string
+  qty: number
+  unit_price_paise: number
+  line_total_paise: number
+  addons: { name: string; price_paise: number }[]
+  notes: string | null
+}
+
+export type OrderStatus =
+  | 'pending_payment'
+  | 'payment_failed'
+  | 'new'
+  | 'preparing'
+  | 'ready'
+  | 'handed_off'
+  | 'completed'
+  | 'cancelled'
+
+export type Order = {
+  public_code: string
+  status: OrderStatus
+  outlet: Outlet
+  distance_km: number | null
+  rerouted_from: string | null
+  lines: OrderLine[]
+  subtotal_paise: number
+  delivery_fee_paise: number
+  total_paise: number
+  gst_included_paise: number
+  placed_at: string
+  promised_at: string | null
+  payment: { method: string; status: string; amount_paise: number } | null
+  last_event_id: number
 }

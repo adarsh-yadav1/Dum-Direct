@@ -6,24 +6,33 @@ This is a take-home project built for a client brief. The client is referred to 
 
 ## Status
 
-Work in progress. The repository is being built in the open, one reviewable commit at a time. This README is updated as each part starts to work, so it only describes what exists.
+Built and working end to end: customer ordering, automatic outlet assignment, the kitchen display with live updates, the prep-time estimate and the menu admin. Payment is a mock. Dish photos are linked from licensed sources and are optional (see `backend/app/seed/images.py`); dishes without one show a plain tile.
 
-## Planned scope
+## What it does
 
-| Area | Description |
-|---|---|
-| Customer app | Delivery location, automatic outlet assignment, menu with photos, portions and add-ons, cart, mock UPI and card payment, live order tracking |
-| Kitchen display | Per-outlet live order board with timers, preparation stages, ready for pickup and rider handoff, readable from two metres |
-| Menu admin | Items, prices by city, outlet availability, out-of-stock pause |
-| Prep-time estimate | Transparent formula based on kitchen load, with an outlet minimum, a manager override and a late-order alert |
+| Area | Address | What it does |
+|---|---|---|
+| Customer app | `/` | Pick a delivery area (search or the phone's position), see which kitchen will cook and how soon, browse the menu (portions, add-ons, time-limited sections, sold-out marks), cart, checkout, test-mode payment, live order tracking |
+| Kitchen display | `/kitchen` | Per-outlet board of New, Cooking, Ready and Out for delivery. Orders arrive live with an optional chime. One action per order, late orders flagged, dish switches, and (managers only) a promised-time change |
+| Menu admin | `/admin` | One menu for every outlet: prices and per-city prices, hide or show dishes, choose which outlets offer each dish, add dishes |
+| Prep-time estimate | in the order flow | `(longest dish time + queue wait) x outlet history factor`, with the outlet's own minimum, travel time, a manager override and a late alert 10 minutes past the promise |
+
+The outlet is never chosen by the customer. It is picked from the delivery location and each outlet's own delivery radius, falling back to a farther outlet when the nearest cannot cook everything in the cart.
 
 ## Technology
 
-- Frontend: React, TypeScript, Vite, Tailwind CSS
+- Frontend: React, TypeScript, Vite, Tailwind CSS (fonts bundled, no external requests)
 - Backend: FastAPI, SQLAlchemy, Alembic, Pydantic
-- Data: PostgreSQL, with Redis for real-time fan-out
-- Real-time updates: Server-Sent Events
-- Local environment: Docker Compose
+- Data: PostgreSQL; Redis for the shared sign-in throttle
+- Real-time updates: Server-Sent Events from the order event log, with a 15-second polling fallback
+- Local environment: Docker Compose; deployment: one container, Postgres and Redis (`render.yaml`)
+
+## Tests
+
+```bash
+cd backend && .venv/bin/python -m pytest      # 360 tests: API, access control, routing, estimator, streams
+cd frontend && npm test                        # cart, formatting and order helpers
+```
 
 ## Documentation
 
@@ -94,3 +103,7 @@ docker compose up --build   # one container serves the web app and the API on ht
 The web app and the API are served from one address on purpose. The sign-in cookie then stays first-party, which browsers that block third-party cookies (Safari, iPhone) require; it also removes the need for CORS in production. The same shape is used for deployment: one container, plus PostgreSQL and Redis.
 
 Status of this path: built and run on Ubuntu with Docker Engine and Compose. The container log shows the migration, the seed and the server start, and the health check passes.
+
+## Deploying
+
+`render.yaml` describes the whole deployment (one web service built from the `Dockerfile`, a Postgres database and a Redis instance). See `deployment.md` in the submission for the steps and the environment variable names. In production the app refuses to start without a strong `JWT_SECRET` and `COOKIE_SECURE=true`.

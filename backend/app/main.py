@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.admin import router as admin_router
 from app.api.kitchen import mine as my_outlets_router
 from app.api.kitchen import router as kitchen_router
 from app.api.localities import router as localities_router
@@ -47,5 +48,6 @@ app.include_router(serviceability_router)
 app.include_router(menu_router)
 app.include_router(localities_router)
 app.include_router(orders_router)
+app.include_router(admin_router)
 app.include_router(my_outlets_router)
 app.include_router(kitchen_router)

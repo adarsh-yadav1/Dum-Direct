@@ -72,6 +72,16 @@ class Settings(BaseSettings):
             raise ValueError("COOKIE_SAMESITE=none requires COOKIE_SECURE=true")
         return self
 
+    @model_validator(mode="after")
+    def _production_must_be_safe(self) -> Self:
+        """A deployed instance must not run with the published default secret or plain-HTTP cookies."""
+        if self.is_production:
+            if self.jwt_secret == "change-me-to-a-long-random-string" or len(self.jwt_secret) < 32:
+                raise ValueError("JWT_SECRET must be set to a random value of at least 32 characters in production")
+            if not self.cookie_secure:
+                raise ValueError("COOKIE_SECURE must be true in production")
+        return self
+
     @field_validator("env")
     @classmethod
     def _check_env(cls, value: str) -> str:

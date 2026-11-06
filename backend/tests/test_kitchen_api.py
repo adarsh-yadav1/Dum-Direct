@@ -250,3 +250,40 @@ def test_availability_is_limited_to_own_outlet_and_listed_dishes(client, engine,
     as_user(client, "admin@example.com")
     assert availability(client, 2, chai.item_id, False).status_code == 404  # Gachibowli does not offer chai
     assert client.put("/outlets/1/items/1/availability", json={"is_available": "x"}).status_code == 422
+
+
+# --- handed-off orders, dish list, outlet list --------------------------------------------------
+
+
+def test_an_order_stays_on_the_board_while_out_for_delivery(client, engine, staff, noon):
+    code = paid_order(client, engine)
+    as_user(client, "chef@example.com")
+    for status in ["preparing", "ready", "handed_off"]:
+        move(client, 1, code, status)
+    assert [o["status"] for o in client.get("/outlets/1/orders").json()["orders"]] == ["handed_off"]
+    move(client, 1, code, "completed")
+    assert client.get("/outlets/1/orders").json()["orders"] == []
+
+
+def test_outlet_dish_list_shows_availability_and_is_limited_to_the_outlet(client, engine, staff, noon):
+    as_user(client, "chef@example.com")
+    dishes = client.get("/outlets/1/items").json()
+    by_name = {d["name"]: d for d in dishes}
+    assert by_name["Qubani ka meetha"]["is_available"] is False  # paused at Kondapur in the seed
+    assert by_name["Veg biryani"]["is_available"] is True
+    assert set(dishes[0]) == {"item_id", "name", "category", "is_available"}
+    as_user(client, "chef3@example.com")
+    assert client.get("/outlets/1/items").status_code == 403
+    as_user(client, "cust@example.com")
+    assert client.get("/outlets/1/items").status_code == 403
+
+
+def test_staff_see_their_own_outlet_and_admins_see_all(client, engine, staff, noon):
+    as_user(client, "chef@example.com")
+    assert [o["name"] for o in client.get("/outlets").json()] == ["Kondapur"]
+    as_user(client, "admin@example.com")
+    assert len(client.get("/outlets").json()) == 4
+    as_user(client, "cust@example.com")
+    assert client.get("/outlets").status_code == 403
+    client.post("/auth/logout")
+    assert client.get("/outlets").status_code == 401

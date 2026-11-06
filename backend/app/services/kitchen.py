@@ -9,9 +9,12 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Order, OrderEvent, OutletItem
+from app.models import Category, MenuItem, Order, OrderEvent, OutletItem
 from app.models.enums import OrderStatus
 from app.services.order_state import OPEN_STATUSES, can_kitchen_move
+
+# The board also keeps an order out with the rider until delivery is confirmed.
+BOARD_STATUSES = frozenset({*OPEN_STATUSES, OrderStatus.HANDED_OFF})
 
 LATE_ALERT_MINUTES = 10
 _STAMP = {
@@ -28,11 +31,11 @@ class KitchenError(Exception):
 
 
 def open_orders(db: Session, outlet_id: int) -> list[Order]:
-    """Orders the kitchen still has to deal with, oldest first."""
+    """Orders still on the board (cooking, ready, or out for delivery), oldest first."""
     return list(
         db.scalars(
             select(Order)
-            .where(Order.outlet_id == outlet_id, Order.status.in_([s.value for s in OPEN_STATUSES]))
+            .where(Order.outlet_id == outlet_id, Order.status.in_([s.value for s in BOARD_STATUSES]))
             .order_by(Order.placed_at, Order.id)
         )
     )
@@ -112,3 +115,15 @@ def set_availability(db: Session, outlet_id: int, item_id: int, available: bool,
     row.is_available, row.updated_by_user_id = available, actor_id
     db.commit()
     return row
+
+
+def outlet_dishes(db: Session, outlet_id: int) -> list[dict]:
+    """The dishes this outlet lists, with whether each can be ordered now, for the pause switches."""
+    rows = db.execute(
+        select(MenuItem.id, MenuItem.name, Category.name, OutletItem.is_available)
+        .join(OutletItem, OutletItem.item_id == MenuItem.id)
+        .join(Category, Category.id == MenuItem.category_id)
+        .where(OutletItem.outlet_id == outlet_id, MenuItem.is_active.is_(True))
+        .order_by(Category.sort_order, MenuItem.name)
+    )
+    return [{"item_id": i, "name": n, "category": c, "is_available": a} for i, n, c, a in rows]

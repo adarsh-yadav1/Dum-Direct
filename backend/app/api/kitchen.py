@@ -1,21 +1,23 @@
 """The kitchen's view of one outlet. Every route checks the caller belongs to that outlet."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_user, outlet_staff
 from app.core.clock import as_utc, utcnow
 from app.api.stream import AfterQuery, LastEventId, cursor, event_stream, sse_response
 from app.core.db import get_db, get_stream_sessions
-from app.models import Order, User
+from app.models import Order, Outlet, User
 from app.schemas.kitchen import AvailabilityRequest, Board, BoardLine, BoardOrder, MoveRequest, PromiseRequest
 from app.services.events import events_after, latest_event_id
-from app.services.access import can_override_estimate
+from app.services.access import can_access_outlet, can_override_estimate
 from app.services.kitchen import (
     KitchenError,
     minutes_late,
     move_order,
     open_orders,
+    outlet_dishes,
     outlet_order,
     override_promise,
     set_availability,
@@ -122,3 +124,22 @@ async def stream(
     with open_session() as db:
         start = cursor(last_event_id, after, lambda: latest_event_id(db, outlet_id=outlet_id))
     return sse_response(event_stream(request, open_session, _outlet_fetch(outlet_id), start))
+
+
+@router.get("/items")
+def list_dishes(outlet_id: int, _: User = Depends(outlet_staff), db: Session = Depends(get_db)) -> list[dict]:
+    """The outlet's dishes and whether each is currently available."""
+    return outlet_dishes(db, outlet_id)
+
+
+mine = APIRouter(tags=["kitchen"])
+
+
+@mine.get("/outlets")
+def my_outlets(user: User = Depends(current_user), db: Session = Depends(get_db)) -> list[dict]:
+    """Outlets the signed-in staff member can work on: their own, or every outlet for an admin."""
+    rows = db.scalars(select(Outlet).order_by(Outlet.city, Outlet.name))
+    allowed = [o for o in rows if can_access_outlet(user, o.id)]
+    if not allowed:
+        raise HTTPException(403, "You do not have access to any outlet.")
+    return [{"id": o.id, "name": o.name, "city": o.city} for o in allowed]

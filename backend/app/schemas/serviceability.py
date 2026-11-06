@@ -21,6 +21,7 @@ class OutletOut(BaseModel):
     address_line: str
     fssai_no: str
     delivery_radius_km: float
+    delivery_fee_paise: int
 
 
 class ServiceabilityResponse(BaseModel):

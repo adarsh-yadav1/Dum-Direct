@@ -63,6 +63,7 @@ def test_response_carries_what_the_customer_needs_to_see(client, engine, seeded)
     assert body["distance_km"] == 0.0
     assert body["eta_minutes"] == 20
     assert len(body["outlet"]["fssai_no"]) == 14
+    assert body["outlet"]["delivery_fee_paise"] >= 0
     assert body["cart_ok"] is True and body["rerouted_from"] is None
 
 

@@ -202,6 +202,8 @@ def test_command_seeds_an_empty_database_and_then_leaves_existing_data_alone(cap
 
 def test_reset_is_refused_in_production_without_force(monkeypatch, capsys):
     monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("JWT_SECRET", "x" * 40)
+    monkeypatch.setenv("COOKIE_SECURE", "true")
     get_settings.cache_clear()
     engine = make_sqlite_engine()
     factory = sessionmaker(bind=engine, expire_on_commit=False)

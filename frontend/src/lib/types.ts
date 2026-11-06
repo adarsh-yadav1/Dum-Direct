@@ -121,3 +121,21 @@ export type BoardOrder = {
 export type Board = { outlet_id: number; cursor: number; orders: BoardOrder[] }
 export type OutletRef = { id: number; name: string; city: string }
 export type Dish = { item_id: number; name: string; category: string; is_available: boolean }
+
+export type AdminVariant = { id: number; label: string; serves: number; price_paise: number; city_prices: Record<string, number> }
+export type AdminItem = {
+  id: number
+  name: string
+  description: string
+  image_url: string | null
+  is_veg: boolean
+  is_active: boolean
+  base_prep_minutes: number
+  variants: AdminVariant[]
+  outlets: { outlet_id: number; listed: boolean; is_available: boolean }[]
+}
+export type AdminMenu = {
+  cities: string[]
+  outlets: OutletRef[]
+  categories: { id: number; name: string; items: AdminItem[] }[]
+}

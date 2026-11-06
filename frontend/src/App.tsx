@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 
 import { Layout } from './components/Layout'
+import { Admin } from './pages/Admin'
 import { Cart } from './pages/Cart'
 import { Checkout } from './pages/Checkout'
 import { Kitchen } from './pages/Kitchen'
@@ -19,6 +20,7 @@ export default function App() {
           <CartProvider>
             <Routes>
               <Route path="kitchen" element={<Kitchen />} />
+              <Route path="admin" element={<Admin />} />
               <Route element={<Layout />}>
                 <Route index element={<Storefront />} />
                 <Route path="cart" element={<Cart />} />

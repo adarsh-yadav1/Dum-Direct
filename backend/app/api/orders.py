@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import require_roles, stream_customer
 from app.core.clock import as_utc, utcnow
 from app.api.stream import AfterQuery, LastEventId, cursor, event_stream, sse_response
 from app.core.db import get_db, get_stream_sessions
@@ -121,7 +121,7 @@ async def stream_order(
     request: Request,
     last_event_id: LastEventId = None,
     after: AfterQuery = None,
-    user: User = Depends(require_roles(Role.CUSTOMER)),
+    user: User = Depends(stream_customer),
     open_session=Depends(get_stream_sessions),
 ):
     """Live updates for the customer's own order. Anyone else's order is reported as missing."""

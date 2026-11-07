@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import current_user, outlet_staff
+from app.api.deps import current_user, outlet_staff, stream_outlet_staff
 from app.core.clock import as_utc, utcnow
 from app.api.stream import AfterQuery, LastEventId, cursor, event_stream, sse_response
 from app.core.db import get_db, get_stream_sessions
@@ -117,7 +117,7 @@ async def stream(
     request: Request,
     last_event_id: LastEventId = None,
     after: AfterQuery = None,
-    _: User = Depends(outlet_staff),
+    _: User = Depends(stream_outlet_staff),
     open_session=Depends(get_stream_sessions),
 ):
     """Live events for one outlet. The caller must belong to it, checked when the stream opens."""

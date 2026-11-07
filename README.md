@@ -40,8 +40,6 @@ cd frontend && npm test                        # cart, formatting and order help
 
 ## Running locally
 
-Current state: the database schema, sample data and demo accounts exist, the API exposes a health route, and the web app shows whether it can reach the API. Ordering is added in later commits.
-
 ### Without Docker
 
 Backend (Python 3.13):

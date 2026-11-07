@@ -21,7 +21,7 @@ The brief requires a "core build" in 6 to 8 screens. Everything else is optional
 Rationale: the brief says "build a small part really well." Loyalty and party orders are in the MUST HAVE list but outside the core build, so they are the first things we cut if time is short. Time-based menus are cheap to support in the data model (a time window on a category), so the model keeps the field even if the admin UI for it is minimal.
 
 ### 1.3 Screens (8 plus sign-in)
-1. Delivery location (geolocation, or search and pin a locality). The system resolves the serving outlet and shows it as information ("Delivering from Kondapur, about 35 min"), with a "Not serviceable here" state when no outlet covers the location. There is no outlet list to choose from
+1. Delivery location (browser geolocation, or search for a locality). The system resolves the serving outlet and shows it as information ("Delivering from Kondapur, about 35 min"), with a "Not serviceable here" state when no outlet covers the location. There is no outlet list to choose from
 2. Menu (categories, photo cards, veg and non-veg marks, spice level)
 3. Item sheet (portion, add-ons, quantity), a bottom sheet rather than a page
 4. Cart and checkout (coupon field in P1, GST statement, ETA)
@@ -40,15 +40,15 @@ Rationale: the brief says "build a small part really well." Loyalty and party or
 |---|---|---|
 | A1 | Only the facts in the brief are used for the business. Outlets other than the three named in the sample data (Kondapur, Gachibowli cloud kitchen, Kukatpally) are invented seed data and marked as such | Brief rule: use only given information |
 | A2 | Outlet coordinates and delivery radii are illustrative, not surveyed | No address data was provided |
-| A3 | The customer's location comes from browser geolocation, or from searching a built-in list of Hyderabad localities with fixed coordinates, then adjusting a pin. No paid maps or geocoding API. Eligibility uses straight-line (haversine) distance, not road distance | Avoids API keys, so reviewers can run the app |
+| A3 | The customer's location comes from browser geolocation, or from searching a built-in list of Hyderabad localities with fixed coordinates. There is no map pin. No paid maps or geocoding API. Eligibility uses straight-line (haversine) distance, not road distance | Avoids API keys, so reviewers can run the app |
 | A15 | Orders are delivery only. "Ready for pickup" means pickup by the delivery partner's rider, so there is no customer pickup option and no reason for the customer to choose an outlet | Rider handoff is in the brief; own pickup is not |
 | A16 | When several outlets cover a location, the nearest one that can supply every cart item is assigned. Load-aware assignment (choosing the outlet with the earliest promised time) is a P1 refinement | Simple, deterministic, explainable |
 | A4 | Delivery fee is zero by default and configurable per outlet. Rider handoff is a status step only | Delivery partner integration is out of scope |
 | A5 | Menu prices are GST-inclusive at 5%. The GST component shown is `total * 5 / 105`, rounded to the nearest paisa | Brief: prices include 5% GST and must say so |
-| A6 | Food photos are placeholders or openly licensed images, with licences listed in `ASSETS.md` | Avoids licensing risk |
+| A6 | Food photos are optional links to images on allowlisted hosts (Unsplash, Pexels, Wikimedia), with credits in `ASSETS.md`; a dish without one shows a neutral tile | Avoids licensing risk |
 | A7 | FSSAI numbers and allergen lists are fictional sample values | Real data is not provided |
-| A8 | Payments are mocked. The mock behaves like a real gateway: pending, success, failure, and a webhook-style confirmation | Brief allows mocked payments |
-| A9 | WhatsApp and SMS messages are written to a `notifications` table and shown in a dev log, not sent | Brief allows mocking outside systems |
+| A8 | Payments are mocked. The mock behaves like a real gateway: pending, success and failure; the caller chooses the simulated outcome and there is no webhook | Brief allows mocked payments |
+| A9 | WhatsApp and SMS messages are meant for a `notifications` table that is never sent from; the table exists but only sample rows are seeded, and messages are not generated (cut) | Brief allows mocking outside systems |
 | A10 | Kitchen capacity per outlet is an assumed configurable number (units per hour), not a measured value | No kitchen data given |
 | A11 | Travel time to the customer is estimated at a flat minutes-per-km figure, configurable, default 3 min/km | No routing data given |
 | A12 | One user belongs to one role. Kitchen staff and managers are bound to exactly one outlet. Admin is global | Keeps access control simple and testable |
@@ -63,8 +63,8 @@ Rationale: the brief says "build a small part really well." Loyalty and party or
 - Frontend: React with TypeScript, built with Vite, styled with Tailwind CSS, served as static files. Mobile-first for customers; a separate tablet layout for the kitchen screen.
 - Backend: FastAPI (Python), SQLAlchemy 2.0, Alembic migrations, Pydantic validation.
 - Database: PostgreSQL.
-- Real-time: Server-Sent Events (SSE) from FastAPI, fanned out through Redis pub/sub.
-- Cache and rate limits: Redis (same instance).
+- Real-time: Server-Sent Events (SSE) from FastAPI. Each stream replays the order event log by increasing id from the database (about once a second); a JSON polling endpoint is the fallback. Redis fan-out was not built.
+- Sign-in throttle: Redis (in-process counts when no Redis URL is set).
 - Auth: email and password, Argon2 or bcrypt hashes, JWT in an httpOnly cookie, role-based access control.
 - Packaging: Docker Compose for local development (api, db, redis, web).
 
@@ -85,11 +85,11 @@ Decision: SSE, with two safeguards. (1) Every event carries a monotonically incr
 ```
 Customer phone (React) ─┐
 Kitchen tablet (React) ─┼─ HTTPS ─> FastAPI ─┬─> PostgreSQL (source of truth)
-Admin laptop (React)  ─┘   │  ^            └─> Redis (pub/sub, rate limit, cache)
+Admin laptop (React)  ─┘   │  ^            └─> Redis (sign-in throttle only)
                            │  └── SSE streams: /outlets/{id}/stream, /orders/{id}/stream
                            └── background tasks: late-order sweeper, notification writer
 ```
-Postgres is the source of truth. Redis only carries notifications; losing Redis loses no data, because clients can always re-read the snapshot.
+Postgres is the source of truth. Redis only holds sign-in throttle counts; losing it loses no data.
 
 ### 3.5 Repository layout
 ```
@@ -238,14 +238,14 @@ Principles taken from the brief: minimal, white space, restrained palette, clear
 - Input validation with Pydantic on every endpoint. Length and range limits.
 - Access control: dependency functions check role and outlet binding. A kitchen user cannot read or change another outlet's orders. A customer can only read their own orders. Tests prove this.
 - Passwords hashed. Cookies are httpOnly, secure in production, SameSite set. CORS restricted to the frontend origin.
-- Rate limiting on sign-in and order creation, backed by Redis.
+- Rate limiting on sign-in, backed by Redis. Order creation is protected by an Idempotency-Key, not a rate limit.
 - Idempotency key on order creation.
 - Privacy (DPDP): collect only name, phone, email and address; a visible privacy note; marketing opt-in is separate and unticked; seed data contains only fictional people.
 
 ---
 
 ## 9. Performance and load
-Peak target is 1,200 orders per hour, about 20 per minute across all outlets, which is modest for FastAPI and Postgres. The real risk is SSE connection count and the kitchen query. Mitigations: index on the kitchen query, one stream per outlet rather than per order card, Redis fan-out, and a k6 or Locust script that places orders at about 3 times peak rate and records latency from order creation to kitchen event. The result goes into the TDD as an honest measurement, including its limits (free-tier hosting).
+Peak target is 1,200 orders per hour, about 20 per minute across all outlets, which is modest for FastAPI and Postgres. The real risk is SSE connection count and the kitchen query. Mitigations: index on the kitchen query, one stream per outlet rather than per order card, and a Python script (`loadtest/load.py`) that places orders at 3 times peak rate. Measured locally against Postgres: 3,600 orders/hour for 60 s with 45 kitchen streams, no errors, placement p95 46 ms, kitchen update p95 958 ms. It also found and fixed a real defect (each stream held a database connection). Limits: one machine, local database, not free-tier hosting.
 
 ---
 
